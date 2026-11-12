@@ -44,3 +44,6 @@ Meta Nuke.app/
 # Review notes (internal)
 META_NUKE_REVIEW.md
 meta_nuke.egg-info/
+
+# local backups
+*.bak-*

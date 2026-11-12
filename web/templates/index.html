@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Meta Nuke — designer box</title>
+<style>
+:root {
+  --bg: #0b0c0e; --panel: #111317; --panel2: #14171c; --well: #07080a;
+  --line: #22262d; --line2: #30353d; --text: #ece7dd; --dim: #979ca4; --faint: #646a73;
+  --amber: #f5a524; --green: #4ade80; --red: #f4475b;
+  --mono: ui-monospace, "SF Mono", SFMono-Regular, "JetBrains Mono", "Cascadia Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --thumb: linear-gradient(90deg, transparent 8px, #6b6f76 8px 9px, transparent 9px), linear-gradient(180deg, #e9e5dc, #a9a59d);
+}
+* { box-sizing: border-box; }
+html { background: var(--bg); }
+body { margin: 0; min-height: 100vh; color: var(--text); font: 15px/1.5 var(--sans);
+  background: radial-gradient(1100px 520px at 50% -8%, #161a20 0%, var(--bg) 62%) fixed; }
+body::after { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 60;
+  background: repeating-linear-gradient(180deg, rgba(255,255,255,.016) 0 1px, transparent 1px 4px); }
+.m, .m * { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+:focus-visible { outline: 2px solid var(--amber); outline-offset: 3px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* top bar */
+.top { position: sticky; top: 0; z-index: 30; border-bottom: 1px solid var(--line); background-color: rgba(11,12,14,.94);
+  background-image: linear-gradient(rgba(255,255,255,.028) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.028) 1px, transparent 1px);
+  background-size: 16px 16px; }
+.top-in { max-width: 1080px; margin: 0 auto; padding: 10px 20px; display: flex; align-items: center; flex-wrap: wrap; gap: 8px 22px; }
+.brand { margin: 0; display: flex; align-items: center; gap: 10px; font: 600 13px/1 var(--mono); letter-spacing: .22em; text-transform: uppercase; }
+.brand svg, .brand b { color: var(--amber); flex: none; font-weight: 600; }
+.status { margin: 0 0 0 auto; display: flex; align-items: center; gap: 9px; font: 500 12px/1 var(--mono); letter-spacing: .16em; color: var(--dim); }
+.status b { font-weight: 600; color: var(--text); min-width: 9ch; }
+.led { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); flex: none; }
+.status[data-tone=work] .led { background: var(--amber); box-shadow: 0 0 8px var(--amber); animation: blink 1.1s steps(2, start) infinite; }
+.status[data-tone=work] b, .status[data-tone=scan] b { color: var(--amber); }
+.status[data-tone=scan] .led { background: var(--amber); }
+.status[data-tone=ok] .led { background: var(--green); box-shadow: 0 0 8px var(--green); }
+.status[data-tone=ok] b { color: var(--green); }
+.status[data-tone=bad] .led { background: var(--red); box-shadow: 0 0 8px var(--red); }
+.status[data-tone=bad] b { color: var(--red); }
+.ver { font: 11px/1 var(--mono); color: var(--dim); letter-spacing: .12em; text-transform: uppercase; }
+.rail { height: 1px; position: relative; overflow: hidden; }
+.rail i { position: absolute; top: 0; bottom: 0; left: 0; width: 0; background: var(--amber); opacity: 0; }
+.rail[data-run="1"] i { width: 32%; opacity: 1; animation: sweep 1.5s cubic-bezier(.45,0,.55,1) infinite; }
+.rail[data-run="done"] i { width: 100%; opacity: 0; transition: opacity .8s .25s; }
+@keyframes sweep { from { transform: translateX(-100%); } to { transform: translateX(320%); } }
+@keyframes blink { 50% { opacity: .35; } }
+
+/* layout */
+main { max-width: 1080px; margin: 0 auto; padding: 24px 20px 28px; display: grid; gap: 20px;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); grid-template-areas: "intake params" "manifest manifest"; }
+.intake { grid-area: intake; } .params { grid-area: params; } .manifest { grid-area: manifest; }
+.panel { min-width: 0; display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 3px;
+  background: linear-gradient(180deg, var(--panel2), var(--panel)); }
+.ph { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 4px 14px; padding: 11px 16px; border-bottom: 1px solid var(--line); }
+.label { margin: 0; font: 600 11px/1.2 var(--mono); letter-spacing: .2em; text-transform: uppercase; color: var(--dim); }
+.label .n { color: var(--amber); }
+.pm { font: 11px/1.3 var(--mono); color: var(--dim); letter-spacing: .08em; font-variant-numeric: tabular-nums; }
+.pb { padding: 16px; flex: 1; display: flex; flex-direction: column; }
+
+/* 01 chamber */
+.chamber { flex: 1; position: relative; padding: 3px; border-radius: 3px; cursor: pointer; transition: background .2s;
+  background: repeating-linear-gradient(-45deg, rgba(245,165,36,.5) 0 7px, transparent 7px 14px); }
+.chamber * { pointer-events: none; }
+.ch-in { position: relative; height: 100%; min-height: 268px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; padding: 36px 22px 28px; border-radius: 1px; transition: box-shadow .2s;
+  background: radial-gradient(ellipse at 50% 42%, #111317, var(--well) 78%); box-shadow: inset 0 3px 16px rgba(0,0,0,.9), inset 0 0 0 1px #000; }
+.br { position: absolute; width: 16px; height: 16px; border: 0 solid var(--faint); transition: border-color .2s; }
+.br.tl { top: 12px; left: 12px; border-width: 1.5px 0 0 1.5px; }
+.br.tr { top: 12px; right: 12px; border-width: 1.5px 1.5px 0 0; }
+.br.bl { bottom: 12px; left: 12px; border-width: 0 0 1.5px 1.5px; }
+.br.brr { bottom: 12px; right: 12px; border-width: 0 1.5px 1.5px 0; }
+.xh { color: var(--faint); transition: color .2s; }
+.ch-t { margin: 18px 0 6px; font: 600 14px/1.3 var(--mono); letter-spacing: .18em; text-transform: uppercase; }
+.ch-s { margin: 0; color: var(--dim); font-size: 13.5px; }
+.ch-s .m { color: var(--text); }
+.ch-f { margin: 16px 0 0; max-width: 34em; font: 10.5px/1.7 var(--mono); letter-spacing: .14em; color: var(--dim); }
+.ch-f span { color: var(--faint); }
+.chamber:hover .br, .chamber:focus-visible .br { border-color: var(--dim); }
+.chamber:focus-visible { outline-color: var(--text); outline-offset: 4px; }
+.chamber.hot { background: repeating-linear-gradient(-45deg, var(--amber) 0 7px, transparent 7px 14px); }
+.chamber.hot .ch-in { box-shadow: inset 0 3px 16px rgba(0,0,0,.9), inset 0 0 0 1px rgba(245,165,36,.55), inset 0 0 80px rgba(245,165,36,.16); }
+.chamber.hot .br, .chamber.hot .xh { border-color: var(--amber); color: var(--amber); }
+
+/* 02 parameters */
+.sub-l { display: block; margin: 0 0 10px; font: 600 10.5px/1 var(--mono); letter-spacing: .2em; text-transform: uppercase; color: var(--dim); }
+.block + .block { margin-top: 18px; padding-top: 16px; border-top: 1px dashed var(--line); }
+.readout { display: flex; align-items: baseline; gap: 14px; margin-bottom: 10px; }
+.nz-num { font: 600 44px/1 var(--mono); font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+.nz-max { font: 13px/1 var(--mono); color: var(--faint); margin-left: -10px; }
+.nz-word { font: 600 12px/1 var(--mono); letter-spacing: .22em; text-transform: uppercase; color: var(--amber); }
+.track { position: relative; padding: 4px 0 26px; }
+.track input { --p: 0%; display: block; width: 100%; height: 30px; margin: 0; background: transparent; -webkit-appearance: none; appearance: none;
+  cursor: pointer; position: relative; z-index: 1; }
+.track input:focus-visible { outline: none; }
+.track input::-webkit-slider-runnable-track { height: 4px; box-shadow: inset 0 1px 1px #000; background: linear-gradient(90deg, var(--amber) var(--p), #262a31 var(--p)); }
+.track input::-moz-range-track { height: 4px; background: #262a31; box-shadow: inset 0 1px 1px #000; }
+.track input::-moz-range-progress { height: 4px; background: var(--amber); }
+.track input::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 28px; margin-top: -12px; border: 1px solid #000; border-radius: 2px;
+  box-shadow: 0 2px 4px rgba(0,0,0,.6); background: var(--thumb); }
+.track input::-moz-range-thumb { width: 18px; height: 28px; border: 1px solid #000; border-radius: 2px; box-shadow: 0 2px 4px rgba(0,0,0,.6); background: var(--thumb); }
+.track input:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--amber); }
+.track input:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--amber); }
+.ticks { position: absolute; left: 0; right: 0; top: 34px; padding: 0 9px; display: flex; justify-content: space-between; }
+.ticks span { position: relative; width: 1px; height: 6px; background: var(--line2); }
+.ticks span:nth-child(5n+1) { height: 10px; }
+.ticks span.on { background: rgba(245,165,36,.7); }
+.ticks span::after { content: attr(data-n); position: absolute; top: 12px; left: 50%; transform: translateX(-50%); font: 10px/1 var(--mono); color: var(--faint); }
+.ticks span:nth-child(5n+1)::after { top: 15px; }
+.ticks span.cur::after { color: var(--text); }
+.hint { margin: 2px 0 0; font-size: 12.5px; color: var(--dim); min-height: 2.6em; }
+.opt { display: flex; align-items: center; gap: 12px; cursor: pointer; position: relative; }
+.opt input { position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; }
+.sw { flex: none; position: relative; width: 40px; height: 22px; border: 1px solid var(--line2); background: var(--well); border-radius: 2px; box-shadow: inset 0 1px 3px #000; }
+.sw::after { content: ""; position: absolute; top: 4px; left: 4px; width: 12px; height: 12px; background: var(--faint); border-radius: 1px; transition: transform .15s, background .15s; }
+.opt input:checked + .sw { border-color: rgba(245,165,36,.7); }
+.opt input:checked + .sw::after { transform: translateX(18px); background: var(--amber); }
+.opt input:focus-visible + .sw { outline: 2px solid var(--amber); outline-offset: 3px; }
+.opt-t { display: block; font-size: 14px; }
+.opt-d { display: block; font-size: 12.5px; color: var(--dim); }
+.actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.actions .btn-sec { flex: 0 0 auto; }
+/* the purge actuator is the primary action: never let it shrink to a sliver.
+   When the two secondary buttons leave less than 210px it wraps to its own row. */
+.actions .housing { flex: 1 1 210px; min-width: 0; }
+.btn-sec { min-height: 52px; padding: 0 20px; font: 600 12px/1 var(--mono); letter-spacing: .18em; text-transform: uppercase; color: var(--text);
+  background: transparent; border: 1px solid var(--line2); border-radius: 3px; cursor: pointer; transition: border-color .15s, color .15s; }
+.btn-sec:hover:not(:disabled) { border-color: var(--amber); color: var(--amber); }
+.btn-sec:disabled { color: var(--faint); border-color: var(--line); cursor: not-allowed; }
+.housing { padding: 6px 6px 9px; border-radius: 4px; box-shadow: inset 0 2px 6px rgba(0,0,0,.8);
+  background: repeating-linear-gradient(-45deg, rgba(245,165,36,.42) 0 6px, #0d0e10 6px 12px); }
+.housing:has(:disabled) { background: repeating-linear-gradient(-45deg, #24272c 0 6px, #0d0e10 6px 12px); }
+.actuator { width: 100%; min-height: 50px; display: flex; align-items: center; justify-content: center; gap: 12px; padding: 0 14px;
+  font: 700 13px/1.15 var(--mono); letter-spacing: .16em; text-transform: uppercase; color: #1d1403; cursor: pointer;
+  white-space: nowrap;
+  border: 1px solid #3a2604; border-radius: 3px; background: linear-gradient(180deg, #ffc35a, var(--amber) 48%, #d98a10);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.45), inset 0 -2px 0 rgba(0,0,0,.18), 0 4px 0 #6b4306, 0 6px 14px rgba(0,0,0,.55);
+  transform: translateY(-2px); transition: transform .07s, box-shadow .07s; }
+.actuator:active:not(:disabled) { transform: translateY(2px); box-shadow: inset 0 2px 6px rgba(0,0,0,.28), 0 0 0 #6b4306, 0 1px 3px rgba(0,0,0,.5); }
+.actuator:focus-visible { outline-color: var(--text); outline-offset: 5px; }
+.actuator:disabled { cursor: not-allowed; color: #6e727a; border-color: #050607; background: linear-gradient(180deg, #25282e, #1a1d21);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.05), 0 4px 0 #0e1013, 0 6px 10px rgba(0,0,0,.5); }
+.act-led { flex: none; width: 8px; height: 8px; border-radius: 50%; background: #0b0c0e; box-shadow: inset 0 1px 1px rgba(0,0,0,.7); }
+.actuator:not(:disabled) .act-led { background: #fff7e2; box-shadow: 0 0 6px 1px rgba(255,247,226,.85); }
+.fault { margin: 14px 0 0; padding: 9px 12px; border: 1px solid rgba(244,71,91,.45); border-left-width: 3px; background: rgba(244,71,91,.07);
+  color: #ff9aa6; font: 12.5px/1.45 var(--mono); }
+.note { margin: 16px 0 0; padding-left: 12px; border-left: 2px solid var(--line2); font-size: 12.5px; color: var(--dim); }
+
+/* 03 manifest */
+.cols, .row { display: grid; gap: 4px 16px; padding: 0 16px 0 14px; border-left: 2px solid transparent;
+  grid-template-columns: 4ch minmax(0, 1fr) 19ch minmax(0, 1.45fr); }
+.cols { padding-top: 8px; padding-bottom: 8px; border-bottom: 1px solid var(--line); font: 600 10px/1.2 var(--mono); letter-spacing: .18em;
+  text-transform: uppercase; color: var(--faint); }
+.cols span:nth-child(3) { text-align: right; }
+.cols span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cols span:first-child, .row > .idx { overflow: visible; text-overflow: clip; }
+.ledger { list-style: none; margin: 0; padding: 0; }
+.row { padding-top: 12px; padding-bottom: 12px; align-items: start; grid-template-areas: "idx file size chips" ". msg msg msg"; }
+.row + .row { border-top: 1px solid var(--line); }
+.row:last-child { border-bottom: 1px solid var(--line); }
+.idx { grid-area: idx; font: 12px/1.6 var(--mono); color: var(--faint); font-variant-numeric: tabular-nums; }
+.file { grid-area: file; min-width: 0; }
+.name { display: block; font: 500 13.5px/1.45 var(--mono); word-break: break-all; }
+.type { display: block; margin-top: 2px; font: 10.5px/1.2 var(--mono); letter-spacing: .14em; color: var(--dim); }
+.size { grid-area: size; text-align: right; white-space: nowrap; font: 12.5px/1.6 var(--mono); font-variant-numeric: tabular-nums; color: var(--dim); }
+.delta { display: block; font-size: 11px; color: var(--faint); }
+.chips { grid-area: chips; display: flex; flex-wrap: wrap; gap: 5px; align-content: flex-start; padding-top: 1px; }
+.chip { display: inline-block; padding: 3px 7px 4px; border: 1px solid var(--line2); border-radius: 2px; font: 500 11.5px/1.1 var(--mono);
+  font-variant-caps: all-small-caps; letter-spacing: .07em; color: var(--dim); }
+.chip.bad { color: var(--red); border-color: rgba(244,71,91,.45); background: rgba(244,71,91,.07); }
+.chip.good { color: var(--green); border-color: rgba(74,222,128,.45); background: rgba(74,222,128,.06); }
+.chip.warn { color: var(--amber); border-color: rgba(245,165,36,.45); }
+.chip.gone { color: var(--faint); border-style: dashed; opacity: .8; }
+.chip.gone::after { content: ""; }
+.msg { grid-area: msg; margin: 2px 0 0; display: flex; gap: 10px; font: 12.5px/1.45 var(--mono); color: var(--dim); }
+.code { flex: none; min-width: 5.5ch; font-weight: 600; letter-spacing: .12em; color: var(--faint); }
+.text { min-width: 0; overflow-wrap: anywhere; }
+.row[data-state=work] { border-left-color: var(--amber); }
+.row[data-state=work] .code, .row[data-state=work] .text { color: var(--amber); }
+.row[data-state=work] .code { animation: blink 1.1s steps(2, start) infinite; }
+.row[data-state=scan] { border-left-color: var(--line2); }
+.row[data-state=scan] .code { color: var(--text); }
+.row[data-state=ok] { border-left-color: var(--green); }
+.row[data-state=ok] .code, .row[data-state=ok] .text { color: var(--green); }
+.row[data-state=residual], .row[data-state=error] { border-left-color: var(--red); }
+.row[data-state=residual] .code, .row[data-state=residual] .text, .row[data-state=error] .code, .row[data-state=error] .text { color: var(--red); }
+.empty { margin: 0; padding: 26px 16px; text-align: center; font: 12px/1.5 var(--mono); letter-spacing: .1em; color: var(--faint); text-transform: uppercase; }
+.empty[hidden], .cols[hidden], .fault[hidden] { display: none; }
+.foot { max-width: 1080px; margin: 0 auto; padding: 0 20px 40px; font: 11px/1.6 var(--mono); letter-spacing: .06em; color: var(--faint); }
+
+@media (max-width: 840px) {
+  main { grid-template-columns: minmax(0, 1fr); grid-template-areas: "intake" "params" "manifest"; padding: 14px 12px 24px; gap: 14px; }
+  .top-in { padding: 9px 12px; }
+  .ch-in { min-height: 200px; padding: 30px 16px 22px; }
+  .foot { padding: 0 12px 32px; }
+}
+@media (max-width: 640px) {
+  .cols { display: none; }
+  .row { grid-template-columns: 3ch minmax(0, 1fr); gap: 6px 10px; padding-right: 12px; padding-left: 10px;
+    grid-template-areas: "idx file" ". size" ". chips" ". msg"; }
+  .size { text-align: left; }
+  .delta { display: inline; margin-left: 8px; }
+  .chips:empty { display: none; }
+  .ver { width: 100%; order: 3; }
+  .pb { padding: 14px 12px; }
+  .ph { padding: 10px 12px; }
+}
+@media (max-width: 440px) {
+  .actions { flex-direction: column; align-items: stretch; }
+  .btn-sec { min-height: 44px; }
+  .actions .housing { flex: 0 0 auto; }
+  .brand { letter-spacing: .16em; }
+  .status { letter-spacing: .1em; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  .rail[data-run="1"] i { width: 100%; transform: none; }
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-in">
+    <h1 class="brand">
+      <svg width="18" height="18" viewBox="0 0 16 16" aria-hidden="true">
+        <circle cx="8" cy="8" r="7.3" fill="none" stroke="currentColor" stroke-width=".9"/>
+        <path fill="currentColor" d="M8 8L10.75 3.24A5.5 5.5 0 0 0 5.25 3.24ZM8 8L2.5 8A5.5 5.5 0 0 0 5.25 12.76ZM8 8L10.75 12.76A5.5 5.5 0 0 0 13.5 8Z"/>
+        <circle cx="8" cy="8" r="1.9" fill="#0b0c0e"/><circle cx="8" cy="8" r="1.1" fill="currentColor"/>
+      </svg>
+      <span>Meta <b>Nuke</b></span>
+    </h1>
+    <p class="status" id="status" data-tone="idle" role="status" aria-live="polite">
+      <span class="led" aria-hidden="true"></span><span>STATE:</span><b id="state">IDLE</b>
+    </p>
+    <span class="ver">v{{ version }} · designer box</span>
+  </div>
+  <div class="rail" id="rail" aria-hidden="true"><i></i></div>
+</header>
+
+<main>
+  <section class="panel intake" aria-labelledby="h-intake">
+    <div class="ph">
+      <h2 class="label" id="h-intake"><span class="n">01</span> · Intake</h2>
+      <span class="pm" id="load"></span>
+    </div>
+    <div class="pb">
+      <div class="chamber" id="drop" role="button" tabindex="0" aria-describedby="drop-limits drop-formats">
+        <div class="ch-in">
+          <span class="br tl"></span><span class="br tr"></span><span class="br bl"></span><span class="br brr"></span>
+          <svg class="xh" width="72" height="72" viewBox="0 0 72 72" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true">
+            <circle cx="36" cy="36" r="22"/><circle cx="36" cy="36" r="2.5"/>
+            <path d="M36 2v22M36 48v22M2 36h22M48 36h22"/>
+            <path d="M36 14v-3M36 61v-3M14 36h-3M61 36h-3" stroke-width="2"/>
+          </svg>
+          <p class="ch-t">Load chamber</p>
+          <p class="ch-s" id="drop-limits">Drop files here or select to browse · max <span class="m">{{ max_files }}</span> files,
+            <span class="m">{{ max_mb }}</span> MB per upload</p>
+          <p class="ch-f" id="drop-formats"><span>Accepts</span> JPG · PNG · GIF · BMP · TIFF · DNG · WEBP · AVIF · HEIC · HEIF · SVG · PDF</p>
+        </div>
+      </div>
+      <label class="sr" for="picker">Choose files to load</label>
+      <input id="picker" type="file" multiple hidden
+             accept=".jpg,.jpeg,.png,.gif,.bmp,.tiff,.tif,.dng,.webp,.avif,.heic,.heif,.svg,.pdf">
+    </div>
+  </section>
+
+  <section class="panel params" aria-labelledby="h-params">
+    <div class="ph">
+      <h2 class="label" id="h-params"><span class="n">02</span> · Parameters</h2>
+    </div>
+    <div class="pb">
+      <div class="block">
+        <label class="sub-l" for="noise">Noise level</label>
+        <div class="readout">
+          <output class="nz-num" id="noiseVal" for="noise">00</output><span class="nz-max">/10</span>
+          <span class="nz-word" id="noiseWord">lossless</span>
+        </div>
+        <div class="track">
+          <input id="noise" type="range" min="0" max="10" step="1" value="0" aria-describedby="noiseHint">
+          <div class="ticks" id="ticks" aria-hidden="true"><span data-n="0"></span><span data-n="1"></span><span data-n="2"></span><span data-n="3"></span><span data-n="4"></span><span data-n="5"></span><span data-n="6"></span><span data-n="7"></span><span data-n="8"></span><span data-n="9"></span><span data-n="10"></span></div>
+        </div>
+        <p class="hint" id="noiseHint"></p>
+      </div>
+
+      <div class="block">
+        <span class="sub-l" aria-hidden="true">Output</span>
+        <label class="opt">
+          <input type="checkbox" id="rename">
+          <span class="sw" aria-hidden="true"></span>
+          <span><span class="opt-t">Hash filenames</span>
+            <span class="opt-d">Name each output by its content hash</span></span>
+        </label>
+      </div>
+
+      <div class="block">
+        <span class="sub-l" aria-hidden="true">Actuation</span>
+        <div class="actions">
+          <button id="inspect" class="btn-sec" type="button" disabled>Inspect</button>
+          <button id="savefile" class="btn-sec" type="button" disabled
+                  title="One file only · writes the nuked file straight to your downloads, no zip">Save file</button>
+          <div class="housing">
+            <button id="nuke" class="actuator" type="button" disabled>
+              <span class="act-led" aria-hidden="true"></span><span>Purge &amp; download</span>
+            </button>
+          </div>
+        </div>
+        <p class="fault" id="fault" role="alert" hidden></p>
+        <p class="note">Each output is re-opened and re-inspected after the purge; anything still carrying metadata is flagged as RESID, not OK.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel manifest" aria-labelledby="h-manifest">
+    <div class="ph">
+      <h2 class="label" id="h-manifest"><span class="n">03</span> · Manifest</h2>
+      <span class="pm" id="tally"></span>
+    </div>
+    <div class="cols" id="cols" aria-hidden="true">
+      <span>Idx</span><span>File</span><span>Size</span><span>Findings · removed after purge</span>
+    </div>
+    <ol class="ledger" id="files" aria-label="Loaded files"></ol>
+    <p class="empty" id="empty">Chamber empty · load files in 01 · Intake</p>
+  </section>
+</main>
+
+<footer class="foot">designer-box.tail8ea96b.ts.net · meta-nuke v{{ version }} · files never leave the
+  tailnet · Save file = one nuked file, Purge &amp; download = zip incl. metanuke-report.json</footer>
+
+<script>
+const $ = id => document.getElementById(id);
+const drop = $('drop');
+const picker = $('picker');
+const noise = $('noise');
+const noiseVal = $('noiseVal');
+const noiseWord = $('noiseWord');
+const noiseHint = $('noiseHint');
+const ticks = [...$('ticks').children];
+const renameBox = $('rename');
+const nukeBtn = $('nuke');
+const saveBtn = $('savefile');
+const inspectBtn = $('inspect');
+const list = $('files');
+const cols = $('cols');
+const empty = $('empty');
+const tally = $('tally');
+const load = $('load');
+const statusEl = $('status');
+const stateEl = $('state');
+const rail = $('rail');
+const fault = $('fault');
+let picked = [];
+let busy = false;
+let railTimer = 0;
+
+const NOISE_WORDS = ['lossless', 'barely', 'light', 'light', 'moderate', 'moderate',
+                     'strong', 'strong', 'heavier', 'heavier', 'maximum'];
+
+function kb(n) {
+  if (typeof n !== 'number' || !isFinite(n)) return '—';
+  if (n >= 1048576) return (n / 1048576).toFixed(2) + ' MB';
+  return (n / 1024).toFixed(n < 10240 ? 1 : 0) + ' KB';
+}
+
+function ext(name) {
+  const m = /\.([^.]+)$/.exec(name);
+  return m ? m[1].toUpperCase() : 'NO EXTENSION';
+}
+
+function setState(text, tone) {
+  stateEl.textContent = text;
+  statusEl.dataset.tone = tone;
+}
+
+function showFault(msg) {
+  fault.textContent = msg;
+  fault.hidden = !msg;
+}
+
+function setBusy(job) {
+  busy = !!job;
+  clearTimeout(railTimer);
+  list.setAttribute('aria-busy', busy ? 'true' : 'false');
+  if (job) { rail.dataset.run = '1'; return; }
+  rail.dataset.run = 'done';
+  railTimer = setTimeout(() => { delete rail.dataset.run; }, 1100);
+}
+
+function chip(box, text, kind, title) {
+  const s = document.createElement('span');
+  s.className = 'chip ' + kind;
+  s.textContent = text;
+  if (title) s.title = title;
+  box.appendChild(s);
+}
+
+function render() {
+  list.textContent = '';
+  picked.forEach((f, i) => {
+    const el = document.createElement('li');
+    el.className = 'row';
+    el.innerHTML = '<span class="idx"></span><div class="file"><span class="name"></span>' +
+      '<span class="type"></span></div><span class="size"></span><div class="chips"></div>' +
+      '<p class="msg"><span class="code"></span><span class="text"></span></p>';
+    el.querySelector('.idx').textContent = String(i + 1).padStart(2, '0');
+    el.querySelector('.name').textContent = f.name;
+    el.querySelector('.type').textContent = (f.format || ext(f.name)).toUpperCase();
+    f.el = el;
+    list.appendChild(el);
+    paint(f);
+  });
+  const total = picked.reduce((s, f) => s + f.size, 0);
+  empty.hidden = picked.length > 0;
+  cols.hidden = picked.length === 0;
+  load.textContent = picked.length
+    ? String(picked.length).padStart(2, '0') + ' loaded · ' + kb(total) : 'empty';
+  updateTally();
+  nukeBtn.disabled = busy || picked.length === 0;
+  saveBtn.disabled = busy || picked.length !== 1;
+  inspectBtn.disabled = busy || picked.length === 0;
+}
+
+function paint(f) {
+  const el = f.el;
+  if (!el) return;
+  const chips = el.querySelector('.chips');
+  const sizeEl = el.querySelector('.size');
+  const r = f.report;
+  chips.textContent = '';
+  let state = 'idle', code = 'IDLE', text = 'loaded · awaiting command';
+  let size = kb(f.size), delta = '';
+
+  if (f.state === 'work') {
+    state = 'work'; code = 'WORK';
+    text = f.job === 'nuke' ? 'purging…' : 'scanning…';
+  } else if (r) {
+    if (r.ok === false) {
+      state = 'error'; code = 'ERR';
+      text = r.message || 'rejected by backend';
+    } else if (r.after) {
+      const before = r.before.bytes;
+      const after = r.unverified ? NaN : r.after.bytes;
+      size = kb(before) + ' → ' + kb(after);
+      if (isFinite(after) && before > 0) {
+        const pct = (after - before) / before * 100;
+        delta = (pct >= 0 ? '+' : '−') + Math.abs(pct).toFixed(1) + '%';
+      }
+      const residual = r.residual || [];
+      if (residual.length) {
+        state = 'residual'; code = 'RESID';
+        text = 'residual metadata: ' + residual.join(', ');
+        residual.forEach(t => chip(chips, t, 'bad'));
+      } else {
+        state = 'ok'; code = 'OK';
+        text = 'nuked · ' + r.findings_total_before + ' metadata fields removed';
+        if (r.unverified) {
+          chip(chips, 'unverified', 'warn',
+               'With hashed filenames the backend re-inspects its output folder, not the file');
+        } else {
+          chip(chips, 'clean', 'good');
+        }
+      }
+      (r.before.flags || []).filter(t => !residual.includes(t))
+        .forEach(t => chip(chips, t, 'gone', 'found before purge · removed'));
+    } else if (r.ok === true) {
+      state = 'ok'; code = 'OK';
+      text = r.message || 'nuked';
+    } else if (typeof r.findings_total === 'number') {
+      state = 'scan'; code = 'SCAN';
+      text = r.findings_total + ' metadata fields found';
+      if (r.flags && r.flags.length) r.flags.forEach(t => chip(chips, t, 'bad'));
+      else if (r.findings_total === 0) chip(chips, 'clean', 'good');
+    } else {
+      state = 'error'; code = 'ERR';
+      text = r.message || 'no report returned for this file';
+    }
+  }
+
+  el.dataset.state = state;
+  el.querySelector('.code').textContent = code;
+  el.querySelector('.text').textContent = text;
+  sizeEl.textContent = size;
+  if (delta) {
+    const d = document.createElement('span');
+    d.className = 'delta';
+    d.textContent = delta;
+    sizeEl.appendChild(d);
+  }
+}
+
+function updateTally() {
+  const c = {ok: 0, residual: 0, error: 0, scan: 0, flagged: 0};
+  picked.forEach(f => {
+    const s = f.el && f.el.dataset.state;
+    if (s in c) c[s]++;
+    if (s === 'scan' && f.report.flags && f.report.flags.length) c.flagged++;
+  });
+  const parts = [String(picked.length).padStart(2, '0') + ' items'];
+  if (c.ok + c.residual + c.error) {
+    parts.push('ok ' + c.ok, 'residual ' + c.residual, 'error ' + c.error);
+  } else if (c.scan) {
+    parts.push('flagged ' + c.flagged + '/' + c.scan);
+  }
+  tally.textContent = picked.length ? parts.join(' · ') : '';
+}
+
+function settle(batch, kind) {
+  const states = batch.map(f => f.el && f.el.dataset.state);
+  if (kind === 'nuke') {
+    if (states.includes('residual')) setState('RESIDUAL', 'bad');
+    else if (states.includes('error')) setState('PARTIAL', 'bad');
+    else if (states.includes('ok')) setState('CLEAN', 'ok');
+    else setState('IDLE', 'idle');
+  } else if (states.includes('scan')) {
+    setState('SCANNED', 'scan');
+  } else {
+    setState(states.includes('error') ? 'FAULT' : 'IDLE', states.includes('error') ? 'bad' : 'idle');
+  }
+}
+
+function addFiles(files) {
+  let added = 0;
+  [...files].forEach(file => {
+    if (picked.some(p => p.name === file.name && p.size === file.size)) return;
+    picked.push({file, name: file.name, size: file.size, state: 'idle'});
+    added++;
+  });
+  render();
+  if (added && !busy) setState('IDLE', 'idle');
+}
+
+drop.addEventListener('click', () => picker.click());
+drop.addEventListener('keydown', e => {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); picker.click(); }
+});
+picker.addEventListener('change', e => { addFiles(e.target.files); picker.value = ''; });
+['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => {
+  e.preventDefault(); drop.classList.add('hot');
+}));
+['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, e => {
+  e.preventDefault(); drop.classList.remove('hot');
+}));
+drop.addEventListener('drop', e => addFiles(e.dataTransfer.files));
+// a drop that misses the chamber must not navigate away from the console
+['dragover', 'drop'].forEach(ev => window.addEventListener(ev, e => e.preventDefault()));
+
+function syncNoise() {
+  const v = +noise.value;
+  noiseVal.textContent = String(v).padStart(2, '0');
+  noiseWord.textContent = NOISE_WORDS[v];
+  noise.setAttribute('aria-valuetext', v + ' · ' + NOISE_WORDS[v]);
+  noise.style.setProperty('--p', v * 10 + '%');
+  ticks.forEach((t, i) => { t.classList.toggle('on', i <= v); t.classList.toggle('cur', i === v); });
+  noiseHint.textContent = v === 0
+    ? 'Pixels untouched. Every metadata block is still stripped.'
+    : 'Per-pixel noise plus JPEG re-encode. Masks tool fingerprints; the file grows.';
+}
+noise.addEventListener('input', syncNoise);
+
+function form(batch) {
+  const fd = new FormData();
+  batch.forEach(f => fd.append('files', f.file, f.name));
+  return fd;
+}
+
+// reports come back one per upload, in upload order; fall back to name lookup
+function match(reports, i, name) {
+  const r = reports[i];
+  return r && r.name === name ? r : reports.find(x => x.name === name);
+}
+
+async function errorFrom(res) {
+  let msg = res.statusText || 'HTTP ' + res.status;
+  try { msg = (await res.json()).error || msg; } catch (_) {}
+  return msg;
+}
+
+function begin(job) {
+  const batch = picked.slice();
+  showFault('');
+  setBusy(job);
+  batch.forEach(f => { f.state = 'work'; f.job = job; f.report = null; });
+  setState(job === 'nuke' ? 'PURGING' : 'SCANNING', 'work');
+  render();
+  return batch;
+}
+
+function fail(batch, msg) {
+  batch.forEach(f => { f.state = 'idle'; f.report = null; });
+  setBusy(null);
+  render();
+  showFault(msg);
+  setState('FAULT', 'bad');
+}
+
+inspectBtn.addEventListener('click', async () => {
+  if (!picked.length || busy) return;
+  const batch = begin('preview');
+  try {
+    const res = await fetch('/api/preview', {method: 'POST', body: form(batch)});
+    if (!res.ok) throw new Error(await errorFrom(res));
+    const data = await res.json();
+    const reports = data.files || [];
+    batch.forEach((f, i) => {
+      const r = match(reports, i, f.name);
+      f.report = r || {};
+      if (r && r.format) f.format = r.format;
+      f.state = 'done';
+    });
+  } catch (err) {
+    fail(batch, 'Inspect failed: ' + err.message);
+    return;
+  }
+  setBusy(null);
+  render();
+  settle(batch, 'preview');
+});
+
+nukeBtn.addEventListener('click', async () => {
+  if (!picked.length || busy) return;
+  const batch = begin('nuke');
+  const fd = form(batch);
+  fd.append('noise', noise.value);
+  fd.append('rename', renameBox.checked ? '1' : '0');
+  let blob;
+  try {
+    const res = await fetch('/api/nuke', {method: 'POST', body: fd});
+    if (!res.ok) throw new Error(await errorFrom(res));
+    blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const cd = res.headers.get('Content-Disposition') || '';
+    const cdName = /filename="?([^"]+)"?/.exec(cd);
+    a.href = url;
+    a.download = cdName ? cdName[1] : 'metanuke.zip';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+  } catch (err) {
+    fail(batch, 'Purge failed: ' + err.message);
+    return;
+  }
+  // the zip is already downloaded: an unreadable report must not look like a failed purge
+  let entries = null;
+  try {
+    const zip = await new Response(blob).arrayBuffer();
+    // read the report straight out of the zip the user just downloaded
+    entries = await unzipJson(zip, 'metanuke-report.json');
+  } catch (_) { entries = null; }
+  const reports = (entries && entries.files) || [];
+  batch.forEach((f, i) => {
+    const r = match(reports, i, f.name);
+    if (!r) { f.state = 'idle'; f.report = null; return; }
+    if (r.before) {
+      r.findings_total = r.before.findings_total;
+      r.findings_total_before = r.before.findings_total;
+    }
+    // with hash_names the backend describes its output directory, which has no extension
+    r.unverified = !!(entries.hash_names && r.after && !/\.[^./]+$/.test(r.after.file || ''));
+    f.report = r;
+    f.state = 'done';
+  });
+  setBusy(null);
+  render();
+  settle(batch, 'nuke');
+  if (!entries) {
+    showFault('Zip downloaded, but metanuke-report.json could not be read in this browser. ' +
+              'Open the report inside the zip for per-file results.');
+    setState('DOWNLOADED', 'scan');
+  }
+});
+
+// One file, no zip: the nuked image itself is the download. Results ride in headers.
+saveBtn.addEventListener('click', async () => {
+  if (picked.length !== 1 || busy) return;
+  const batch = begin('nuke');
+  const fd = form(batch);
+  fd.append('noise', noise.value);
+  fd.append('rename', renameBox.checked ? '1' : '0');
+  fd.append('output', 'raw');
+  let blob;
+  try {
+    const res = await fetch('/api/nuke', {method: 'POST', body: fd});
+    if (!res.ok) throw new Error(await errorFrom(res));
+    blob = await res.blob();
+    const cd = res.headers.get('Content-Disposition') || '';
+    const cdName = /filename="?([^"]+)"?/.exec(cd);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = cdName ? cdName[1] : batch[0].name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+    const head = k => res.headers.get('X-Metanuke-' + k) || '';
+    const flags = head('Flags').split(',').filter(Boolean);
+    const residual = head('Residual').split(',').filter(Boolean);
+    const f = batch[0];
+    f.report = {
+      ok: true,
+      residual,
+      findings_total_before: +(head('Findings') || 0),
+      before: {bytes: +(head('Before-Bytes') || 0), flags},
+      after: {bytes: +(head('Bytes') || blob.size)},
+    };
+    f.state = 'done';
+  } catch (err) {
+    fail(batch, 'Save failed: ' + err.message);
+    return;
+  }
+  setBusy(null);
+  render();
+  settle(batch, 'nuke');
+});
+
+async function unzipJson(buffer, want) {
+  // minimal zip reader: enough for the stored/deflated JSON report we just made
+  const view = new DataView(buffer);
+  const bytes = new Uint8Array(buffer);
+  for (let i = bytes.length - 22; i >= 0; i--) {
+    if (view.getUint32(i, true) !== 0x06054b50) continue;
+    const count = view.getUint16(i + 10, true);
+    let off = view.getUint32(i + 16, true);
+    for (let n = 0; n < count; n++) {
+      if (view.getUint32(off, true) !== 0x02014b50) return null;
+      const method = view.getUint16(off + 10, true);
+      const csize = view.getUint32(off + 20, true);
+      const nameLen = view.getUint16(off + 28, true);
+      const extraLen = view.getUint16(off + 30, true);
+      const commentLen = view.getUint16(off + 32, true);
+      const localOff = view.getUint32(off + 42, true);
+      const name = new TextDecoder().decode(bytes.subarray(off + 46, off + 46 + nameLen));
+      if (name === want) {
+        const lNameLen = view.getUint16(localOff + 26, true);
+        const lExtraLen = view.getUint16(localOff + 28, true);
+        const start = localOff + 30 + lNameLen + lExtraLen;
+        const data = bytes.subarray(start, start + csize);
+        if (method === 0) return JSON.parse(new TextDecoder().decode(data));
+        const stream = new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+        return JSON.parse(await new Response(stream).text());
+      }
+      off += 46 + nameLen + extraLen + commentLen;
+    }
+  }
+  return null;
+}
+
+syncNoise();
+render();
+</script>
+</body>
+</html>
